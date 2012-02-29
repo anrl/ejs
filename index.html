@@ -1,88 +1,127 @@
 <!DOCTYPE html>
 <html>
-<head>
-  <meta charset='utf-8'>
+  <head>
+    <title>Example JS</title>
+    <link href="styles/style.css" type="text/css" rel="stylesheet"/>
+  
+    <!-- jQuery & Console -->
+    <script src="scripts/jquery.js"></script>
+    <script src="scripts/jquery.create.js"></script>
+    <script src="scripts/beautifier.js"></script>
+    <script src="scripts/console/prettyprint.js"></script>
+    <script src="scripts/console/console.js"></script>    
+    <script src="scripts/treeview.js"></script>
 
-  <title>b-studios/ejs @ GitHub</title>
+    <!-- EJS Compiler -->
+    <script src="scripts/index.js"></script>
+    <!-- OMeta -->
+    <script src="scripts/ometa/base.js"></script>
+    <!-- jsonml -->
+    <script src="scripts/jsonml/jsonml_walker.js"></script>
+    <script src="scripts/jsonml/node.js"></script>
+    <!-- es5 -->
+    <script src="scripts/es5/es5_nodes.js"></script>
+    <script src="scripts/es5/es5_parser.js"></script>
+    <script src="scripts/es5/es5_translator.js"></script>
+    <!-- ejs -->    
+    <script src="scripts/ejs/ejs_nodes.js"></script>
+    <script src="scripts/ejs/ejs_parser.js"></script>
+    <script src="scripts/ejs/ejs_translator.js"></script>
+    <script src="scripts/ejs/ejs_runtime.js"></script>
 
-  <style type="text/css">
-    body {
-      margin-top: 1.0em;
-      background-color: #dbb455;
-      font-family: Helvetica, Arial, FreeSans, san-serif;
-      color: #000000;
-    }
-    #container {
-      margin: 0 auto;
-      width: 700px;
-    }
-    h1 { font-size: 3.8em; color: #244baa; margin-bottom: 3px; }
-    h1 .small { font-size: 0.4em; }
-    h1 a { text-decoration: none }
-    h2 { font-size: 1.5em; color: #244baa; }
-    h3 { text-align: center; color: #244baa; }
-    a { color: #244baa; }
-    .description { font-size: 1.2em; margin-bottom: 30px; margin-top: 30px; font-style: italic;}
-    .download { float: right; }
-    pre { background: #000; color: #fff; padding: 15px;}
-    hr { border: 0; width: 80%; border-bottom: 1px solid #aaa}
-    .footer { text-align:center; padding-top:30px; font-style: italic; }
-  </style>
-</head>
+    <script>
+      $(function() {
+  
+        function unescape(str) {
+          return str.replace(/\&\w+;/, function(m) {
+            return {
+              "&lt;"  : '<',
+              "&gt;"  : '>',
+              "&amp;" : '&'
+            }[m]
+          })
+        }
 
-<body>
-  <a href="https://github.com/b-studios/ejs"><img style="position: absolute; top: 0; right: 0; border: 0;" src="http://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub" /></a>
+        var input         = $('#input'),
+            jscode        = $('#jscode'),            
+            button        = $('#eval'),
+            last_compiled = "",
+            tree          = Treeview('#treeview'),
+            cons          = new Console('#console');
 
-  <div id="container">
+        input.keyup(function(evt) {
+    
+          if(input.val() == last_compiled) return true;
 
-    <div class="download">
-      <a href="https://github.com/b-studios/ejs/zipball/master">
-        <img border="0" width="90" src="https://github.com/images/modules/download/zip.png"></a>
-      <a href="https://github.com/b-studios/ejs/tarball/master">
-        <img border="0" width="90" src="https://github.com/images/modules/download/tar.png"></a>
+          last_compiled = input.val();
+
+          try {
+            var ejs_tree = ejs.EJSParser.parse(input.val()),
+                es5_tree = ejs.EJSTranslator.translate(ejs_tree),
+                es5_code = es5.ES5Translator.translate(es5_tree),
+                beauty   = js_beautify(es5_code, { indent_size: 2, space_before_conditional: false });
+            jscode.html(beauty);
+            tree.show(es5_tree);
+            
+          } catch(e) { /* ignore */ console.error(e) }
+
+        }).focus(function() {
+          input.parent('div').addClass('focus');
+
+        }).blur(function() {
+          input.parent('div').removeClass('focus');
+        })
+
+        button.click(function() {
+          input.trigger('keyup');
+          (function(console) {
+            try {
+              eval(unescape(jscode.html()));
+            } catch(e) { console.error(e) }
+          })(cons);
+          var height = 0;
+          return false;
+        });
+
+        $(window).keydown(function(evt) {
+          if(evt.keyCode == 13 && evt.ctrlKey)
+            button.trigger('click');
+        });
+
+        $('.switch a').click(function(evt) {
+          var el = $(this);
+          el.parent('li').addClass('active').siblings('li').removeClass('active');
+          $(el.attr('href')).removeClass('hidden').siblings().addClass('hidden');
+          return false;
+        });        
+        
+      });
+
+    </script>
+  </head>
+  <body>
+    <header>
+      <h1>Example JS</h1>
+      <nav>
+        <a href="http://github.com/b-studios/ejs">Project Page</a>
+      </nav>
+    </header>
+    <div id="wrapper">
+      <div id="before-compilation">
+        <textarea id="input">console.log("Hello World");</textarea>
+      </div>      
+      <div id="after-compilation">
+        <ul class="switch">
+          <li class="code active"><a href="#jscode"></a></li>
+          <li class="tree"><a href="#treeview"></a></li>
+        </ul>
+        <output id="jscode"></output>
+        <ul id="treeview" class="hidden"></ul>
+      </div>
+      <div id="after-evaluation">
+        <ul id="console"></ul>
+        <button id="eval" title="Ctrl + Return">Execute</button>
+      </div>
     </div>
-
-    <h1><a href="https://github.com/b-studios/ejs">ejs</a>
-      <span class="small">by <a href="https://github.com/b-studios">b-studios</a></span></h1>
-
-    <div class="description">
-      Toolkit to play with custom language extensions for JavaScript
-    </div>
-
-    
-
-    
-
-    
-
-    
-
-    
-      <h2>Authors</h2>
-      <p>Jonathan (jonathan@b-studios.de)<br/>      </p>
-    
-
-    
-      <h2>Contact</h2>
-      <p>Jonathan (jonathan@b-studios.de)<br/>      </p>
-    
-
-    <h2>Download</h2>
-    <p>
-      You can download this project in either
-      <a href="https://github.com/b-studios/ejs/zipball/master">zip</a> or
-      <a href="https://github.com/b-studios/ejs/tarball/master">tar formats.
-    </p>
-    <p>You can also clone the project with <a href="http://git-scm.com">Git</a>
-      by running:
-      <pre>$ git clone git://github.com/b-studios/ejs</pre>
-    </p>
-
-    <div class="footer">
-      get the source code on GitHub : <a href="https://github.com/b-studios/ejs">b-studios/ejs</a>
-    </div>
-
-  </div>
-
-</body>
+  </body>
 </html>
